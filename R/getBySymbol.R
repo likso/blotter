@@ -37,11 +37,22 @@
     else
         symbols = Symbols
     
-    for (symbol in symbols) {
-        tmp_col = Portfolio$symbols[[symbol]][[namePosPL]][Dates,Attribute,drop=FALSE]
-        if(is.null(table)) table = tmp_col
-        else table = merge(table, tmp_col)
+    # for (symbol in symbols) {
+    #     tmp_col = Portfolio$symbols[[symbol]][[namePosPL]][Dates,Attribute,drop=FALSE]
+    #     if(is.null(table)) table = tmp_col
+    #     else table = merge(table, tmp_col)
+    # }
+    # Faster crunk logic for merging multiple column
+    n <- length(symbols)
+    nChunks <- floor(sqrt(n))
+    idx <- split(1:n, sort(1:n %% nChunks))
+    table <- foreach (chunk = 1:nChunks, .combine = "merge") %do% {
+      table <- foreach (i = idx[[chunk]], .combine = "merge") %do% {
+        Portfolio$symbols[[symbols[i]]][[namePosPL]][Dates,Attribute,drop=FALSE]
+      }
+      table
     }
+    
     if(length(table) > 0) colnames(table) = symbols
     class(table)<-class(xts())
     return(table)
